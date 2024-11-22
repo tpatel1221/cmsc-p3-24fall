@@ -1,4 +1,0 @@
-filterpy
-matplotlib
-numpy
-Pillow
