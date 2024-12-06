@@ -70,8 +70,13 @@ class ParticleFilter:
         particles = []
 
         # BEGIN_YOUR_CODE ######################################################
-        raise NotImplementedError
-        
+        for _ in range(self.num_particles):
+            x = np.random.uniform(self.minx, self.maxx)
+            y = np.random.uniform(self.miny, self.maxy)
+            angle = np.random.uniform(0, 2 * np.pi)
+            orient = np.array([np.cos(angle), np.sin(angle)])
+            particle = Particle(np.array([x, y]), orient)
+            particles.append(particle)
         # END_YOUR_CODE ########################################################
 
         return particles
@@ -104,17 +109,21 @@ class ParticleFilter:
         """
         Performs one step of particle filtering according to particle-filtering pseudocode in AIMA.
         """
-
         new_particles = []
 
         # BEGIN_YOUR_CODE ######################################################
-        raise NotImplementedError
-        #Hint: when computing the weights of each particle, you will probably want
-        # to use compute_prenorm_weight to compute an unnormalized weight for each
-        # particle individually, and then normalize the weights of all the particles
-        # using normalize_weights
+        #step 1
+        for p in self.particles:
+            new_particle = self.transition_sample(p, delta_angle, speed)
+            new_particles.append(new_particle)
 
+            new_particle.weight = self.compute_prenorm_weight(new_particle, sensor, max_sensor_range, sensor_std, evidence) #step2
         
+        #step 2 part 2
+        normalize_weights(new_particles)
+        
+        #step 3
+        self.particles = self.weighted_sample_w_replacement(new_particles)
         # END_YOUR_CODE ########################################################
 
         return new_particles
@@ -125,9 +134,11 @@ class ParticleFilter:
         """
         weight = None
         # BEGIN_YOUR_CODE ######################################################
-        raise NotImplementedError
+        predicted_readings = sensor(particle.pos)
         #Hint: use the weight_gaussian_kernel method
-
+        weight = 1.0
+        for i in range(len(predicted_readings)):  
+            weight = weight * weight_gaussian_kernel(predicted_readings[i], evidence[i], sensor_std)
         
         # END_YOUR_CODE ########################################################
         return weight
@@ -137,11 +148,19 @@ class ParticleFilter:
         Samples a next pose for this particle according to the car's transition model.
         """
         new_particle = None
-        # BEGIN_YOUR_CODE ######################################################
-        raise NotImplementedError
+        # BEGIN_YOUR_CODE ###################################################### 
         #Hint: rotate the orientation by delta_angle, and then move in that
         # direction at the given speed over 1 unit of time. You will need to add
         # noise at the end to simulate stochasticity in dynamics
+        current = np.arctan2(particle.orient[1], particle.orient[0])
+        new_angle = current + delta_angle
+
+        new_orientation = np.array([np.cos(new_angle), np.sin(new_angle)])
+        new_position = particle.pos + (speed * new_orientation)
+
+        new_particle = Particle(new_position, new_orientation)
+        new_particle.add_noise()
+        return new_particle
     
     def fix_particle(self, particle):
         """
