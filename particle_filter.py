@@ -116,14 +116,13 @@ class ParticleFilter:
         for p in self.particles:
             new_particle = self.transition_sample(p, delta_angle, speed)
             new_particles.append(new_particle)
-
             new_particle.weight = self.compute_prenorm_weight(new_particle, sensor, max_sensor_range, sensor_std, evidence) #step2
         
-        #step 2 part 2
         normalize_weights(new_particles)
         
         #step 3
-        self.particles = self.weighted_sample_w_replacement(new_particles)
+        new_particles = self.weighted_sample_w_replacement(new_particles)
+        self.particles = new_particles
         # END_YOUR_CODE ########################################################
 
         return new_particles
@@ -134,11 +133,12 @@ class ParticleFilter:
         """
         weight = None
         # BEGIN_YOUR_CODE ######################################################
-        predicted_readings = sensor(particle.pos)
+        x, y = particle.pos
+        predicted = sensor(x, y, max_sensor_range)
         #Hint: use the weight_gaussian_kernel method
         weight = 1.0
-        for i in range(len(predicted_readings)):  
-            weight = weight * weight_gaussian_kernel(predicted_readings[i], evidence[i], sensor_std)
+        for i in range(len(predicted)):  
+            weight = weight * weight_gaussian_kernel(predicted[i], evidence[i], std=25)
         
         # END_YOUR_CODE ########################################################
         return weight
@@ -156,6 +156,7 @@ class ParticleFilter:
         new_angle = current + delta_angle
 
         new_orientation = np.array([np.cos(new_angle), np.sin(new_angle)])
+        new_orientation /= np.linalg.norm(new_orientation)
         new_position = particle.pos + (speed * new_orientation)
 
         new_particle = Particle(new_position, new_orientation)
